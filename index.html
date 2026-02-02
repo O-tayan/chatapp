@@ -1,0 +1,165 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+  <meta charset="UTF-8" />
+  <title>なんでも質問チャット</title>
+
+  <!-- Google Fonts: Noto Sans JP -->
+  <link href="https://fonts.googleapis.com/css2?family=Noto+Sans+JP:wght@400;600;700&display=swap" rel="stylesheet">
+
+  <style>
+    :root{
+      --bg:#F6F8FB; --text:#1F2937; --muted:#6B7280;
+      --card:#FFFFFF; --border:#E5E7EB;
+      --primary:#2563EB; --primary-strong:#1E40AF; --primary-soft:#DBEAFE;
+      --danger:#EF4444;
+    }
+    * { box-sizing: border-box; }
+    html, body { height: 100%; }
+    body{
+      font-family:"Noto Sans JP","Segoe UI",Roboto,"Yu Gothic UI","ヒラギノ角ゴ ProN",sans-serif;
+      background:var(--bg); color:var(--text);
+      margin:0; padding:24px;
+    }
+    .container{ max-width:760px; margin:0 auto; }
+    header{
+      display:flex; align-items:center; justify-content:space-between;
+      margin:8px 0 20px; gap:12px;
+    }
+    .title{ font-size:22px; font-weight:700; letter-spacing:.2px; }
+    .badge{
+      font-size:12px; color:var(--primary-strong); background:var(--primary-soft);
+      padding:4px 10px; border-radius:999px; border:1px solid #BFDBFE; white-space:nowrap;
+    }
+    .card{
+      background:var(--card); border:1px solid var(--border); border-radius:12px;
+      box-shadow:0 2px 12px rgba(15,23,42,.05); padding:16px;
+    }
+    label.helper{ display:block; font-size:13px; color:var(--muted); margin-bottom:6px; }
+    textarea{
+      width:100%; border:1px solid var(--border); border-radius:12px; padding:12px 14px;
+      font-size:16px; line-height:1.6; resize:vertical; min-height:96px; background:#fff;
+    }
+    .controls{ display:flex; gap:12px; margin-top:12px; flex-wrap:wrap; }
+    .btn{
+      appearance:none; border:0; border-radius:12px; padding:12px 16px; font-weight:600;
+      cursor:pointer; transition:.2s ease;
+    }
+    .btn-primary{
+      background:var(--primary); color:#fff; min-width:160px; min-height:48px;
+      box-shadow:0 2px 8px rgba(37,99,235,.18);
+    }
+    .btn-primary:hover{ background:var(--primary-strong); }
+    .btn-primary:active{ transform:translateY(1px); }
+    .btn-primary:disabled{ opacity:.6; cursor:not-allowed; box-shadow:none; }
+    select, .pill{
+      border:1px solid var(--border); background:#fff; color:var(--text);
+      border-radius:10px; padding:10px 12px; min-height:44px;
+    }
+    .pill { display:inline-flex; align-items:center; gap:8px; }
+    .pill small{ font-size:12px; color:var(--muted); }
+    .notice{ font-size:13px; color:var(--muted); margin-top:8px; }
+    .list{ margin-top:20px; display:grid; gap:12px; }
+    .q{
+      background:#fff; border:1px solid var(--border); border-radius:12px;
+      padding:12px 14px;
+    }
+    .q .meta{
+      font-size:12px; color:var(--muted); display:flex; gap:10px; margin-top:6px; align-items:center;
+    }
+    .q .meta .like{ margin-left:auto; display:inline-flex; align-items:center; gap:6px; }
+    .like button{
+      border:1px solid var(--border); background:#fff; border-radius:999px; padding:6px 10px; cursor:pointer;
+    }
+    .err{
+      background:#FEF2F2; border:1px solid #FECACA; color:#991B1B;
+      padding:10px 12px; border-radius:10px; margin-top:10px; font-size:14px;
+      display:none;
+    }
+    .hidden{ display:none !important; }
+    @media (max-width: 480px){
+      header{ flex-direction:column; align-items:flex-start; gap:6px; }
+      .btn-primary{ width:100%; }
+      select{ flex:1; width:100%; }
+    }
+  </style>
+</head>
+
+<body>
+  <div class="container">
+    <header>
+      <!-- ここを書き換えれば見出しが変わります -->
+      <div class="title" id="page-title">オプティム会社説明 質問チャット</div>
+      <div class="badge" id="badge">匿名</div>
+    </header>
+
+    <section class="card" aria-labelledby="ask-title">
+      <label id="ask-title" for="q" class="helper">気になった点を自由にどうぞ（300文字まで）</label>
+      <textarea id="q" rows="4" maxlength="300" placeholder="例：評価制度の透明性は？ 配属は希望できますか？"></textarea>
+
+      <div class="controls">
+        <button id="send" class="btn btn-primary">送信する</button>
+
+  <div id="list"></div>
+
+  <script type="module">
+    import { createClient } from "https://esm.sh/@supabase/supabase-js@2";
+
+    // ここにあなたの Supabase URL と Anon key を貼る
+    const SUPABASE_URL = "https://yobzplbwgjdafocljdkq.supabase.co" ;
+    const SUPABASE_ANON_KEY = "sb_publishable_IQlGaMn0HG94yoSgDK5mNw_S_bLLDE7" ;
+
+    const supabase = createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
+
+    // --- 投稿処理 ---
+    const textarea = document.getElementById("q");
+    const button = document.getElementById("send");
+    const list = document.getElementById("list");
+
+    button.onclick = async () => {
+      const content = textarea.value.trim();
+      if (!content) return alert("質問を入力してください");
+      
+      const { error } = await supabase.from("questions").insert({
+        content: content,
+        event_id: "default"
+      });
+
+      if (error) {
+        alert("送信エラー: " + error.message);
+      } else {
+        textarea.value = "";
+      }
+    };
+
+    // --- 質問一覧読み込み ---
+    async function load() {
+      const { data } = await supabase
+        .from("questions")
+        .select("*")
+        .order("created_at", { ascending: false });
+
+      list.innerHTML = data
+        .map((q) => `<p>・${q.content}</p>`)
+        .join("");
+    }
+
+    load();
+
+    // --- Realtime ---
+    supabase
+      .channel("questions-ch")
+      .on(
+        "postgres_changes",
+        { event: "INSERT", schema: "public", table: "questions" },
+        (payload) => {
+          const q = payload.new;
+          const p = document.createElement("p");
+          p.innerText = "・" + q.content;
+          list.prepend(p);
+        }
+      )
+      .subscribe();
+  </script>
+</body>
+</html>
